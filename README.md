@@ -1,104 +1,478 @@
 # CivicPulse
 
-CivicPulse is an AI-assisted civic development intelligence platform. It is designed to turn multilingual citizen requests into transparent, evidence-backed infrastructure priorities for policymakers.
+> An AI-assisted civic development intelligence prototype that turns citizen reports into transparent, evidence-backed infrastructure priorities.
 
-## Phase 1 status
+**Hackathon / track:** Not declared in this repository. CivicPulse is designed around a BRICS cross-border civic-development theme and currently demonstrates India and Brazil.
 
-This repository currently contains the typed foundation only:
+- **Live app:** <https://civic-pulse-web.vercel.app/>
+- **Backend API:** <https://civicpulse-api-jcjxv742lq-uc.a.run.app>
 
-- minimal Next.js/React/TypeScript web shell
-- Fastify API with `GET /health`
-- shared TypeScript and Zod domain contracts
-- India and Brazil country configurations
-- India `CountryAdapter` skeleton
-- deterministic `priority-v1` scoring module and tests
-- environment template and npm workspace scripts
+## 1. One-minute overview
 
-Gemini, Firestore, BigQuery, Maps, voice, authentication, and the final dashboard are intentionally not integrated yet.
+**CivicPulse converts multilingual citizen development requests into transparent, evidence-backed infrastructure priorities for policymakers.**
 
-## Architecture
+It is not merely a grievance chatbot or a dashboard. Citizen feedback is the input to a civic-intelligence pipeline: the application structures the issue, resolves it to an available region when possible, combines it with source-labelled indicators, applies a deterministic score, and presents a candidate intervention with its evidence.
 
 ```text
-Next.js web shell
-        ↓
-Fastify API on Cloud Run later
-        ↓
-Shared domain contracts
-        ↓
-Gemini / Firestore / BigQuery adapters in later phases
+Citizen feedback       = input
+Civic intelligence     = core product
+Policy recommendation  = output
 ```
 
-The central rule is:
+## 2. Problem statement
 
-> Gemini understands and explains. Validated application code and verified data determine priority.
+Public-development demand is often fragmented across informal reports and hard to compare with demographic, infrastructure, and investment context. That makes it difficult to find demand hotspots, explain trade-offs, and prioritize candidate projects consistently. The problem applies across countries, while local administrative structures and source data differ.
 
-## Requirements
+CivicPulse addresses this innovation problem with a country-neutral core and country-specific configuration. It demonstrates the approach with India and Brazil; it does not claim complete BRICS-wide production integration.
 
-- Node.js 20 or newer
-- npm
+## 3. Solution and flow
 
-## Local setup
+```text
+Citizen
+  ↓
+Text / voice
+  ↓
+Gemini structured extraction
+  ↓
+Validated civic request
+  ↓
+Region selection or approximate location resolution
+  ↓
+Population, infrastructure, and investment enrichment
+  ↓
+Regional/category aggregation
+  ↓
+Deterministic priority scoring
+  ↓
+Candidate project recommendation
+  ↓
+Evidence-grounded AI explanation
+  ↓
+Policymaker dashboard
+```
+
+Each stage has a distinct purpose. Gemini makes unstructured language usable; Zod schemas constrain the result; repositories provide source-labelled context; application code aggregates and scores; a deterministic mapping proposes an intervention; and Gemini can explain only the assembled evidence.
+
+## 4. Key features
+
+### Citizen intake
+
+- Text reports, with English and Hindi selection in the current citizen UI.
+- Browser voice recording and Google Speech-to-Text transcription for `en-IN` and `hi-IN` when the backend is configured for Google Cloud.
+- Optional browser location or a selectable demo region.
+- A returned request ID, processing status, and interpreted structured category.
+
+### AI and civic intelligence
+
+- Vertex AI / Gemini structured extraction of category, issue type, severity, urgency, language, summary, evidence spans, and confidence.
+- Local deterministic mock AI when Gemini configuration is absent.
+- Regional and category aggregation, ranked demand hotspots, and deterministic `priority-v1` scores.
+- Deterministic candidate-project mapping and evidence-only Gemini explanations.
+
+### Policymaker dashboard
+
+- India/Brazil country selection and issue-category filter.
+- Google Maps hotspot markers when `NEXT_PUBLIC_MAPS_BROWSER_KEY` is configured.
+- Ranked hotspot list, project detail, factor evidence, data-source labels, and AI explanation.
+- Clear empty/error states when maps, data, or API calls are unavailable.
+
+### Cross-border and cloud foundations
+
+- India and Brazil country configurations plus adapters under `services/api/src/country/`.
+- Local seed repositories for a credential-free demo, with Firestore and BigQuery repositories for GCP mode.
+- Cloud Run-compatible Fastify API, Vertex AI / Gemini, Google Speech-to-Text, Firestore, BigQuery, and Google Maps integration points.
+
+## 5. What makes the AI meaningful
+
+Gemini is deliberately not the policy engine.
+
+```text
+Gemini
+  → understands unstructured citizen language
+  → extracts constrained civic information
+  → explains supplied evidence
+
+Application code
+  → validates AI output
+  → resolves a selected or approximate location
+  → aggregates reports
+  → calculates the priority score
+  → maps issues to candidate interventions
+
+Repositories and datasets
+  → provide population, infrastructure, investment, and source metadata
+```
+
+**The final priority score is deterministic, not generated by Gemini.** This keeps the ranking inspectable and reduces the risk that a model invents data or makes opaque public-policy decisions. Gemini responses are parsed and validated against the shared Zod contract before use.
+
+## 6. Priority scoring
+
+`packages/shared/src/scoring.ts` implements `priority-v1`. Inputs are clamped/validated to the normalized `[0, 1]` range, then scored in application code:
+
+```text
+priority_score =
+    25 * demand_pressure
+  + 25 * infrastructure_gap
+  + 20 * population_impact
+  + 15 * equity_factor
+  + 10 * urgency_recency
+  +  5 * investment_gap
+```
+
+| Factor | Weight | Current aggregation input |
+|---|---:|---|
+| Demand pressure | 25% | Regional request density, normalized within the ranked set |
+| Infrastructure gap | 25% | Category infrastructure-gap indicator |
+| Population impact | 20% | Affected-region population, normalized within the ranked set |
+| Equity/vulnerability | 15% | Regional vulnerability indicator |
+| Urgency/recency | 10% | Highest mapped urgency among grouped reports |
+| Investment gap | 5% | Category planned-investment gap indicator |
+
+The current prototype is a transparent heuristic, not a scientifically validated public-policy model. Scores should support human review, not automatically authorize projects.
+
+## 7. End-to-end example
+
+Example citizen input:
+
+> “मेरे इलाके में बारिश के बाद नाली भर जाती है और सड़क पर पानी जमा रहता है।”
+
+For voice input, the browser first sends audio to the speech endpoint. The resulting Hindi text goes through the same report endpoint. Gemini may extract a sanitation or water-related issue depending on the constrained model output; the application validates it, associates a selected/nearby region if available, enriches it, and groups it with reports in that region and category. A hotspot can then lead to a drainage-related recommendation and an explanation based on the returned evidence.
+
+Illustrative structured output (not a real submission or seeded value):
+
+```json
+{
+  "category": "sanitation",
+  "subcategory": "drainage",
+  "issueType": "blocked_drain",
+  "severity": 4,
+  "urgency": "high",
+  "language": "hi",
+  "locationText": null,
+  "summary": "Rainwater collects on the road after a drain fills.",
+  "evidenceSpans": ["नाली भर जाती है", "पानी जमा रहता है"],
+  "confidence": 0.88
+}
+```
+
+## 8. Architecture
+
+```text
+                        CITIZEN
+                           │ text / voice
+                           ▼
+                    NEXT.JS FRONTEND
+                           │ HTTPS JSON
+                           ▼
+                     FASTIFY API
+          ┌────────────────┼─────────────────┐
+          ▼                ▼                 ▼
+     Gemini / Vertex   Firestore          BigQuery
+     Speech-to-Text   (reports)     (indicators / sources)
+          │                │                 │
+          └────────────────┴────────┬────────┘
+                                     ▼
+                         ENRICHMENT + PRIORITY ENGINE
+                                     ▼
+                         PROJECT RECOMMENDER + EXPLANATION
+                                     ▼
+                           POLICYMAKER DASHBOARD
+                                     ▼
+                                GOOGLE MAPS
+```
+
+- **Next.js frontend:** citizen input and dashboard UI. It consumes the API; it does not duplicate scoring logic.
+- **Fastify API:** validates requests, orchestrates AI, storage, enrichment, hotspots, projects, and explanations.
+- **Gemini:** structured extraction and evidence-limited explanation only.
+- **Firestore:** operational reports and recommendations in `REPOSITORY_MODE=gcp`.
+- **BigQuery:** population, infrastructure, investment, boundaries, and source metadata in GCP mode.
+- **Shared package:** domain schemas and the deterministic scoring contract.
+
+## 9. Deployment architecture
+
+```text
+GitHub
+ ├── apps/web       → Vercel → https://civic-pulse-web.vercel.app/
+ └── services/api   → Cloud Run → https://civicpulse-api-jcjxv742lq-uc.a.run.app
+                                      ├── Vertex AI / Gemini
+                                      ├── Firestore
+                                      └── BigQuery
+```
+
+The frontend and backend deploy separately because the browser needs a static/Next.js application while the API needs server-side Google Cloud credentials and data access. Configure the Cloud Run API's `ALLOWED_ORIGIN` to include the Vercel origin; the API's CORS policy also permits local development origins.
+
+## 10. Repository structure
+
+```text
+civic-pulse/
+├── apps/web/                 Next.js App Router frontend
+├── services/api/             Fastify API, AI, enrichment, persistence, cloud scripts
+├── packages/shared/          Shared types, Zod schemas, priority scoring
+├── config/
+│   ├── categories.json       Controlled category vocabulary
+│   └── countries/            India and Brazil configuration JSON
+├── docs/                     Design, data-model, scoring, and AI-contract notes
+├── Dockerfile                Container build for the API deployment
+├── .env.example              Safe environment-variable template
+└── README.md                 This document
+```
+
+There is no `data/` directory in the current repository. The deterministic demo records live in `services/api/src/repositories.ts`; GCP seed/verification scripts live in `services/api/src/scripts/`.
+
+## 11. Important files
+
+| Path | Purpose |
+|---|---|
+| `apps/web/app/page.tsx` | Public landing page |
+| `apps/web/app/citizen/page.tsx` | Citizen intake UI |
+| `apps/web/app/dashboard/page.tsx` | Policymaker dashboard and maps UI |
+| `services/api/src/server.ts` | API routes, validation, orchestration, CORS |
+| `services/api/src/gemini.ts` | Vertex Gemini adapter and constrained JSON contracts |
+| `services/api/src/speech.ts` | Google Speech-to-Text adapter |
+| `services/api/src/enrichment.ts` | Aggregation and hotspot ranking |
+| `services/api/src/recommendations.ts` | Deterministic candidate-project mapping |
+| `services/api/src/repositories.ts` | Local seeds plus Firestore/BigQuery repositories |
+| `packages/shared/src/domain.ts` | Shared entities and Zod schemas |
+| `packages/shared/src/scoring.ts` | `priority-v1` score calculation |
+| `services/api/src/country/` | Country adapter implementations |
+| `config/countries/` | Country configuration documents |
+| `services/api/src/scripts/seed-gcp.ts` | GCP demo-data seed script |
+
+## 12. API reference
+
+All API routes are implemented in `services/api/src/server.ts`.
+
+| Method and path | Purpose | Key inputs / response |
+|---|---|---|
+| `GET /health` | Health and AI mode | `{ status, aiMode }` where `aiMode` is `live` or `mock` |
+| `POST /api/speech/transcribe` | Transcribe browser audio | JSON `audioBase64`, `languageCode`, `mimeType`; returns `transcript` |
+| `POST /api/reports` | Create and process a citizen report | JSON input below; returns a request ID and `structuredRequest` |
+| `GET /api/hotspots` | Rank regional/category hotspots | Required `countryCode=IN|BR`, optional `category` |
+| `GET /api/projects/:id` | Return one project and evidence | `id` is `regionId:category` |
+| `GET /api/projects/:id/explanation` | Generate evidence-limited explanation | Same project ID |
+| `GET /api/countries` | List enabled country configurations | Returns `countries` |
+| `GET /api/dashboard/overview` | Dashboard summary | Optional `countryCode=IN|BR` |
+
+### Create a report
+
+```bash
+curl -X POST http://localhost:8080/api/reports \
+  -H 'content-type: application/json' \
+  -d '{"countryCode":"IN","channel":"text","language":"en","text":"The street drain is blocked.","selectedRegionId":"IN-DL-ND"}'
+```
+
+Valid input fields are `countryCode` (`IN` or `BR`), `channel` (`text`, `voice`, or `messaging`), optional `language`, `text`, optional `location` (`latitude`/`longitude`), and optional `selectedRegionId`. A successful response is `201` and includes `reportId`, `status`, and `structuredRequest`.
+
+```json
+{
+  "reportId": "uuid",
+  "status": "processed",
+  "structuredRequest": { "category": "sanitation", "severity": 4 }
+}
+```
+
+Bad input or an unsupported country returns `400`; extraction or transcription failures return controlled `502` responses; unavailable speech configuration returns `503`; an unknown project returns `404`.
+
+### Query hotspots
+
+```bash
+curl 'http://localhost:8080/api/hotspots?countryCode=IN&category=sanitation'
+```
+
+The response contains `hotspots`, each with a region, category, request count, average severity, priority score/factors, and deterministic recommended project. Project IDs use the form `IN-DL-ND:sanitation`.
+
+## 13. Data model and integrity
+
+Important shared entities include:
+
+- **Report:** original report metadata, structured request, selected/resolved region, processing status, enrichment, and source type.
+- **Country / Region:** enabled country configuration and administrative region metadata.
+- **PopulationIndicator, InfrastructureIndicator, InvestmentIndicator:** source-labelled data used for enrichment.
+- **DataSource:** publisher, URL, year, license, type, and notes for lineage.
+- **PriorityResult:** score, normalized factors, and `algorithmVersion`.
+- **Recommendation:** a record type and a deterministic candidate intervention returned with hotspot data.
+
+In `REPOSITORY_MODE=local`, the API uses in-memory reports plus deterministic synthetic India/Brazil seeds. In `REPOSITORY_MODE=gcp`, reports and recommendations are in Firestore while indicator, boundary, and source data are read from BigQuery. GCP seed scripts create prototype tables and synthetic demo rows.
+
+**Synthetic records are not real citizen submissions and must not be represented as official government data.** The local seed metadata explicitly labels India and Brazil indicators as `synthetic_demo`; their URLs are deliberately non-production `example.invalid` placeholders.
+
+## 14. Country abstraction
+
+```text
+                 COMMON ENGINE
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+        INDIA                     BRAZIL
+          │                         │
+    CountryConfig + adapter   CountryConfig + adapter
+          │                         │
+        Local/GCP data            Local/GCP data
+```
+
+`CountryConfig` defines country code, languages, administrative levels, default level, and available civic categories. Country adapters belong in `services/api/src/country/`; the shared domain and enrichment engine use country-neutral concepts. **The prototype demonstrates India and Brazil; this architecture is intended to support additional countries without rewriting the core intelligence engine.**
+
+## 15. AI contract
+
+The Gemini extraction schema, defined in `packages/shared/src/domain.ts` and used by `services/api/src/gemini.ts`, contains:
+
+```text
+category, subcategory, issueType, severity, urgency,
+language, locationText, summary, evidenceSpans, confidence
+```
+
+- Categories are limited to the shared controlled vocabulary.
+- `severity` is an integer from 1 to 5 and `confidence` is in `[0, 1]`.
+- `locationText` may be null; the API never asks Gemini to invent coordinates.
+- Gemini is instructed to use only report facts and supplied evidence, not statistics, costs, plans, or datasets.
+- The API parses every extraction with Zod. In live mode, malformed/model failures produce a controlled error rather than guessed data.
+- The API uses `live` AI only when `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and `GEMINI_MODEL` are set; otherwise it uses the deterministic mock implementation and reports `aiMode: "mock"`.
+
+## 16. Google Cloud services
+
+| Service | Current role |
+|---|---|
+| Vertex AI / Gemini | Structured extraction and evidence-only explanation in live AI mode |
+| Cloud Run | Intended/production backend runtime |
+| Firestore | Operational report and recommendation persistence in GCP mode |
+| BigQuery | Indicator, boundary, and data-source repositories in GCP mode |
+| Speech-to-Text | Browser voice-report transcription when configured |
+| Google Maps JavaScript API | Dashboard hotspot visualization with a restricted browser key |
+
+The code uses Application Default Credentials; no service-account JSON file is read from this project. Secret Manager and IAM are sensible deployment controls, but they are not implemented as application modules in this repository.
+
+## 17. Environment variables
+
+Copy `.env.example` to `.env`; never commit real credentials.
+
+### Backend
+
+| Variable | Purpose |
+|---|---|
+| `NODE_ENV` | Runtime environment |
+| `REPOSITORY_MODE` | `local` (default) or `gcp` |
+| `GOOGLE_CLOUD_PROJECT` | GCP project; enables cloud clients when configured |
+| `GOOGLE_CLOUD_LOCATION` | Vertex/BigQuery location |
+| `GEMINI_MODEL` | Vertex Gemini model name; with project/location enables live AI |
+| `FIRESTORE_DATABASE` | Firestore database ID for GCP mode |
+| `BIGQUERY_DATASET` | BigQuery dataset for GCP mode |
+| `ALLOWED_ORIGIN` | Comma-separated additional allowed CORS origins |
+| `MAPS_SERVER_KEY` | Reserved in the template; not consumed by the current API code |
+| `DEMO_MODE` | Present in the template; not consumed by the current API code |
+
+### Frontend
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | Browser-visible API base URL |
+| `NEXT_PUBLIC_MAPS_BROWSER_KEY` | Browser-visible Maps key; restrict it by origin and API |
+
+Variables prefixed `NEXT_PUBLIC_` are intentionally exposed to the browser and therefore must never contain server credentials.
+
+## 18. Local development
+
+Requirements: Node.js 20+ and npm.
 
 ```bash
 npm install
 cp .env.example .env
+
+npm run dev       # web and API together
+npm run dev:web   # Next.js only
+npm run dev:api   # Fastify only
+
+npm run test
+npm run lint
+npm run build
 ```
 
-The default `REPOSITORY_MODE=local` uses deterministic in-memory repositories and requires no cloud credentials.
-
-## Phase 5 persistence
-
-Set `REPOSITORY_MODE=gcp` to use Application Default Credentials, Firestore, and BigQuery. No credential JSON is read from this project.
+The local API defaults to `http://localhost:8080`; Next.js normally uses `http://localhost:3000`. The default local repository mode needs no cloud credentials. For GCP persistence, configure the GCP variables, use Application Default Credentials, then run:
 
 ```bash
-export REPOSITORY_MODE=gcp
-export GOOGLE_CLOUD_PROJECT=your-project
-export GOOGLE_CLOUD_LOCATION=US
-export FIRESTORE_DATABASE='(default)'
-export BIGQUERY_DATASET=civicpulse_analytics
 npm run seed:gcp --workspace @civicpulse/api
 npm run verify:gcp --workspace @civicpulse/api
 ```
 
-The seed creates the BigQuery dataset and `population_indicators`, `infrastructure_indicators`, `investment_indicators`, `admin_boundaries`, `report_facts`, `region_priority`, and `data_sources` tables when absent. It uses stable Firestore document IDs and replaces only rows carrying the synthetic demo source ID, so repeating it does not accumulate demo rows.
+Enable the relevant Google Cloud APIs and provision Firestore/BigQuery before using GCP mode. A live Gemini integration test requires valid Application Default Credentials and the Gemini variables.
 
-## Phase 6 Gemini evidence layer
+## 19. Testing, reliability, security, and privacy
 
-When `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and `GEMINI_MODEL` are all configured, the API uses Vertex Gemini through Application Default Credentials. Otherwise it uses a deterministic mock adapter, keeping local development credential-free. `GET /health` reports `aiMode` as `live` or `mock`.
+Vitest covers shared scoring, citizen utilities, API routes, enrichment, repositories, and the optional live Gemini integration. ESLint/TypeScript checks run through `npm run lint`, and `npm run build` builds both workspaces.
 
-`GET /api/projects/:id/explanation` sends Gemini only the server-built priority evidence and source metadata; it never sends raw citizen report text. The optional live integration test runs automatically only when all three Gemini variables are set.
+Reliability behaviors include Zod request/model validation, mock AI fallback for unconfigured local environments, controlled AI/transcription error responses, a selectable region when precise location is unavailable, map-independent ranked data, and dashboard loading/error/empty states.
 
-## Commands
+The repository avoids committed service-account key files. Keep server credentials in deployment-managed identity/secrets, restrict the Maps browser key, use `ALLOWED_ORIGIN` for CORS, and avoid storing unnecessary personal data. Exact browser coordinates are only used to select the closest available region in the current prototype; dashboard data is regional.
 
-```bash
-npm run dev       # web and API together
-npm run dev:web   # Next.js only
-npm run dev:api   # Fastify only
-npm run test      # shared scoring tests
-npm run lint      # TypeScript/lint checks
-npm run build     # web and API builds
-```
+## 20. Limitations and roadmap
 
-The API listens on `http://localhost:8080/health` by default and returns:
+### Current limitations
 
-```json
-{"status":"ok"}
-```
+- The available local indicators, regions, and sources are synthetic prototype data.
+- Only India and Brazil are demonstrated.
+- The current country picker in the citizen UI exposes demo Indian regions; dashboard data supports India and Brazil.
+- Priority-v1 is a prototype heuristic, not a government decision system.
+- Model outputs are constrained and validated but not guaranteed to be correct.
+- Maps, Speech-to-Text, Gemini, Firestore, and BigQuery require production configuration and credentials.
+- No autonomous policy execution, authentication, or government-system integration is implemented.
 
-The web shell listens on the Next.js development port, normally `http://localhost:3000`.
+### Prototype complete
 
-## Repository structure
+The repository contains citizen intake, structured AI/mock extraction, local/GCP repository layers, ranking, candidate recommendations, dashboard evidence, maps integration, and deployment-ready frontend/API boundaries.
 
-```text
-apps/web/              Next.js shell and future UI
-services/api/          Fastify API and future adapters
-packages/shared/       Shared types, Zod schemas, scoring, interfaces
-config/countries/      Country configuration JSON
-config/categories.json Controlled civic category vocabulary
-data/                   Future source, seed, and schema data
-docs/                   Architecture and implementation contracts
-```
+### Near-term and production work
 
-## Next phase
+Add source-backed datasets and freshness policy, broader country/UI configuration, human review and authentication, robust location resolution, monitoring/rate limiting, privacy review, and outcome-based evaluation of scoring weights before any national-scale use.
 
-Phase 2 should establish the data models and deterministic seed data, then add local/demo repositories before connecting cloud persistence. The first API milestone remains `POST /api/reports` only after those contracts are stable.
+## 21. Demo flow
+
+1. Open the live app and select **Report a civic issue**.
+2. Submit a Hindi or English report (voice requires configured speech service).
+3. Observe the request ID and interpreted category.
+4. Open **Policymaker dashboard** and choose a country/category.
+5. Inspect a ranked hotspot and its priority factors.
+6. Open project detail to see evidence and source labels.
+7. Review the evidence-grounded AI explanation when available.
+8. Switch India/Brazil in the dashboard to show the common engine with country-specific configuration.
+
+## 22. Hackathon alignment
+
+The repository does not contain an official judging rubric, hackathon name, or track title. Against common AI/cross-border civic-innovation criteria, CivicPulse demonstrates technical execution through constrained Gemini use and Google Cloud adapters; problem–solution fit through feedback-to-priority flow; cross-border design through India/Brazil configuration; deployability through Vercel/Cloud Run boundaries; and impact through transparent, evidence-oriented ranking. These are prototype claims, not production-scale claims.
+
+## 23. Explain CivicPulse in 30 seconds
+
+“CivicPulse helps policymakers understand where civic infrastructure needs are most urgent. A citizen can submit a local issue in text or voice; Gemini turns the language into a validated civic request, while application code combines it with regional evidence and applies a transparent score. The dashboard shows a ranked candidate project and the evidence behind it, so AI assists understanding rather than making opaque policy decisions.”
+
+## 24. AI agent context
+
+### Project goal
+
+Turn citizen reports into transparent regional development priorities without delegating scoring or policy decisions to an LLM.
+
+### Core invariants
+
+1. Gemini does not calculate the final priority score.
+2. Gemini must not invent evidence, coordinates, statistics, or policy commitments.
+3. Synthetic data must remain clearly labelled.
+4. Country-specific behavior belongs in country configs/adapters.
+5. The frontend consumes backend APIs rather than duplicating business logic.
+6. Secrets must never be committed or exposed through `NEXT_PUBLIC_*` variables.
+7. Do not invent government integrations or data sources.
+8. Extend existing shared contracts rather than creating parallel ones.
+9. Preserve the citizen → AI → enrichment → priority → recommendation pipeline.
+
+### Source of truth and change boundaries
+
+- Shared schemas and scoring: `packages/shared/src/`.
+- API orchestration: `services/api/src/server.ts`.
+- AI: `services/api/src/gemini.ts` and `mock-ai.ts`.
+- Country rules: `services/api/src/country/` and `config/countries/`.
+- Frontend: `apps/web/app/`.
+- Local demo data and cloud repository implementations: `services/api/src/repositories.ts`.
+
+Run `npm run lint`, `npm test`, and `npm run build` before committing. Do not casually change the architecture, scoring weights, data labels, or AI responsibility boundary.
+
+## 25. Contribution and third-party notice
+
+Place frontend work in `apps/web`, API/business orchestration in `services/api`, reusable contracts/scoring in `packages/shared`, and country-specific changes in the country configuration/adapters. Keep AI behavior behind the existing AI-service interface and write/update tests for contract or scoring changes.
+
+No project license file is present in this repository; a project license has not yet been declared. The package manifests identify third-party dependencies including Next.js, React, Fastify, Zod, the Google Cloud client libraries, `@google/genai`, Google Maps React bindings, and Vitest. Consult each dependency's own package metadata/license before redistribution.
