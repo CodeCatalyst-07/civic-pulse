@@ -1,0 +1,29 @@
+{
+  "name": "@civicpulse/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "lint": "eslint .",
+    "test": "node --env-file=../../.env ../../node_modules/vitest/vitest.mjs run src/server.test.ts src/enrichment.test.ts src/repositories.test.ts src/gemini.integration.test.ts",
+    "seed:gcp": "node --env-file=../../.env --import tsx src/scripts/seed-gcp.ts",
+    "verify:gcp": "node --env-file=../../.env --import tsx src/scripts/verify-gcp.ts"
+  },
+  "dependencies": {
+    "@civicpulse/shared": "*",
+    "@fastify/cors": "latest",
+    "@fastify/helmet": "latest",
+    "@google-cloud/bigquery": "^9.0.2",
+    "@google-cloud/firestore": "^9.0.0",
+    "@google-cloud/speech": "^8.0.1",
+    "@google/genai": "latest",
+    "fastify": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

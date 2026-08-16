@@ -1,0 +1,29 @@
+{
+  "name": "@civicpulse/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "eslint .",
+    "test": "vitest run app/citizen/citizen.test.ts"
+  },
+  "dependencies": {
+    "@civicpulse/shared": "*",
+    "@googlemaps/js-api-loader": "latest",
+    "@vis.gl/react-google-maps": "latest",
+    "@tanstack/react-query": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/google.maps": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  }
+}

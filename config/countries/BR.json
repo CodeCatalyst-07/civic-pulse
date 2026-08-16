@@ -1,0 +1,21 @@
+{
+  "countryCode": "BR",
+  "name": "Brazil",
+  "languages": ["pt"],
+  "administrativeLevels": ["state", "municipality"],
+  "defaultAdminLevel": "municipality",
+  "categories": [
+    "water",
+    "sanitation",
+    "roads",
+    "transport",
+    "electricity",
+    "education",
+    "health",
+    "housing",
+    "public_safety",
+    "digital_connectivity",
+    "waste",
+    "other"
+  ]
+}

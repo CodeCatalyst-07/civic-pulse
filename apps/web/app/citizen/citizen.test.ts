@@ -1,0 +1,12 @@
+import { describe, expect, it, vi } from "vitest";
+import { createReportPayload, microphoneFailureMessage, submitCitizenReport, supportedLanguages } from "./citizen-utils";
+
+describe("Phase 8 citizen input", () => {
+  it("offers English and Hindi through configuration", () => expect(supportedLanguages.map((language) => language.code)).toEqual(["en", "hi"]));
+  it("builds a text submission with an optional selected location", () => expect(createReportPayload({ text: " Broken street light ", language: "en", channel: "text", location: null, selectedRegionId: "IN-DL-ND" })).toMatchObject({ text: "Broken street light", channel: "text", selectedRegionId: "IN-DL-ND" }));
+  it("submits a voice transcript through the existing reports endpoint", async () => { const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reportId: "request-123", structuredRequest: { category: "sanitation" } }) }); await expect(submitCitizenReport(fetcher, "http://api", createReportPayload({ text: "नाली बंद है", language: "hi", channel: "voice", location: null, selectedRegionId: "" }))).resolves.toEqual({ reportId: "request-123", category: "sanitation" }); expect(fetcher).toHaveBeenCalledWith("http://api/api/reports", expect.objectContaining({ method: "POST" })); });
+  it("reports microphone permission failures clearly", () => expect(microphoneFailureMessage(new DOMException("denied", "NotAllowedError"))).toContain("permission was denied"));
+  it("rejects empty input before submitting", () => expect(() => createReportPayload({ text: "   ", language: "en", channel: "text", location: null, selectedRegionId: "" })).toThrow("Describe the issue"));
+  it("surfaces submission failures", async () => { const fetcher = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: "Service unavailable" }) }); await expect(submitCitizenReport(fetcher, "http://api", createReportPayload({ text: "Road damaged", language: "en", channel: "text", location: null, selectedRegionId: "" }))).rejects.toThrow("Service unavailable"); });
+  it("returns the successful request ID and interpreted category", async () => { const fetcher = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reportId: "request-456", structuredRequest: { category: "roads" } }) }); await expect(submitCitizenReport(fetcher, "http://api", createReportPayload({ text: "Road damaged", language: "en", channel: "text", location: null, selectedRegionId: "" }))).resolves.toEqual({ reportId: "request-456", category: "roads" }); });
+});

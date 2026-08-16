@@ -1,0 +1,34 @@
+{
+  "name": "civicpulse",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CivicPulse foundation for AI-assisted civic development prioritization",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api -c blue,green \"npm run dev --workspace @civicpulse/web\" \"npm run dev --workspace @civicpulse/api\"",
+    "dev:web": "npm run dev --workspace @civicpulse/web",
+    "dev:api": "npm run dev --workspace @civicpulse/api",
+    "seed:gcp": "npm run seed:gcp --workspace @civicpulse/api",
+    "verify:gcp": "npm run verify:gcp --workspace @civicpulse/api",
+    "test": "npm run test --workspace @civicpulse/shared && npm run test --workspace @civicpulse/web && npm run test --workspace @civicpulse/api",
+    "lint": "npm run lint --workspace @civicpulse/shared && npm run lint --workspace @civicpulse/web && npm run lint --workspace @civicpulse/api",
+    "build": "npm run build --workspace @civicpulse/web && npm run build --workspace @civicpulse/api"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "concurrently": "latest",
+    "eslint": "latest",
+    "prettier": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest",
+    "vitest": "latest"
+  }
+}
